@@ -7,7 +7,7 @@ import os
 import matplotlib as mpl
 import seaborn as sns
 
-from Enums import ClType, CovType
+from .Enums import ClType, CovType
 
 cosmicfish_pylib_path = '/home/maraio/Codes/CosmicFish/python/'
 sys.path.insert(0, os.path.normpath(cosmicfish_pylib_path))
@@ -122,8 +122,7 @@ class ParamFisher:
                 # Create field objects for our T & E fields
                 field_E = ccl.WeakLensingTracer(cosmo, dndz=(self.redshift_range, self.dNdz))
 
-                #* Recompute the Cl values for each bin combination
-
+                # Recompute the Cl values for each bin combination
                 cl_E_E = ccl.angular_cl(cosmo, field_E, field_E, self.ells)
 
                 # Store the current parameter value in our list
