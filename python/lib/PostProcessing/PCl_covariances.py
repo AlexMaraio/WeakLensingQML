@@ -5,7 +5,8 @@ import pymaster as nmt
 
 class PCl_covariances:
 
-    def __init__(self, n_side, Cl_EE, Cl_EB, Cl_BB, ells_per_bin, purify_E, purify_B, mask, num_samples, noise_std, cl_noise):
+    def __init__(self, n_side, Cl_EE, Cl_EB, Cl_BB, ells_per_bin, purify_E, purify_B, mask, num_samples, noise_std,
+                 cl_noise, label):
         # Set the n_side attribute for the generates maps
         self.n_side = n_side
         self.n_pix = 12 * self.n_side * self.n_side
@@ -47,6 +48,9 @@ class PCl_covariances:
         self.ana_cov_EE_EE = None
         self.ana_cov_BB_BB = None
 
+        # Store the user-defined label for this PCl class
+        self.label = label
+
     def compute_numerical_covariance(self):
         #* Function to estimate the numerical covariance matrix for this class
 
@@ -65,7 +69,7 @@ class PCl_covariances:
             if np.mod(i, 50) == 0: print(i, end=' ', flush=True)
 
             # Generate our new random realisation
-            alm_E, alm_B = hp.synalm([self.Cl_EE, self.Cl_BB, self.Cl_EB], lmax=self.l_max, new=True)  # Check order of Cl value here!
+            alm_E, alm_B = hp.synalm([self.Cl_EE, self.Cl_BB, self.Cl_EB], lmax=self.l_max, new=True)
             map_Q, map_U = hp.alm2map_spin([alm_E, alm_B], self.n_side, 2, self.l_max)
 
             if self.noise_std != 0:
@@ -93,8 +97,16 @@ class PCl_covariances:
         self.num_cov_EE_EE = np.cov(cl_EE_samples, rowvar=False)
         self.num_cov_BB_BB = np.cov(cl_BB_samples, rowvar=False)
 
+        # Save the numerical EE-EE and BB-BB covariance matrices
+        np.save(f'../data/Fishers/num_cov_EE_EE_{self.label}', self.num_cov_EE_EE)
+        np.save(f'../data/Fishers/num_cov_BB_BB_{self.label}', self.num_cov_BB_BB)
+
         # Print new line once done
         print('')
+
+    def load_numerical_covariance(self):
+        self.num_cov_EE_EE = np.load(f'../data/Fishers/num_cov_EE_EE_{self.label}.npy')
+        self.num_cov_BB_BB = np.load(f'../data/Fishers/num_cov_BB_BB_{self.label}.npy')
 
     def compute_analytic_covariance(self):
         #* Function to estimate the analytical covariance matrix for this class
