@@ -47,26 +47,63 @@ mask_nostars_apo = nmt.mask_apodization(mask_nostars, aposize=apo_scale, apotype
 # star_mask = hp.read_map('/home/maraio/Codes/flask-UCL/bin/StarMask_N256.fits', dtype=float)
 # mask_whstars_apo = mask_nostars_apo * star_mask
 
-
-#* Use NaMaster's mask
-# msk = np.zeros(hp.nside2npix(n_side))
-# th, ph = hp.pix2ang(n_side, np.arange(hp.nside2npix(n_side)))
-# ph[np.where(ph > np.pi)[0]] -= 2 * np.pi
-# msk[np.where((th < 2.63) & (th > 1.86) & (ph > -np.pi / 4) & (ph < np.pi / 4))[0]] = 1.0
-
-# mask_nostars = msk.copy()
-# mask_nostars_apo = nmt.mask_apodization(mask_nostars, aposize=apo_scale, apotype='C1')
-
-# mask_whstars = mask_nostars * star_mask
-# # mask_whstars_apo = nmt.mask_apodization(mask_whstars, aposize=apo_scale, apotype='C1')
-# mask_whstars_apo = mask_nostars_apo
-
+# Compute the four sets of mask's f_sky
+mask_nostars_fsky = mask_nostars.sum() / mask_nostars.size
+mask_whstars_fsky = mask_whstars.sum() / mask_whstars.size
+mask_nostars_apo_fsky = mask_nostars_apo.sum() / mask_nostars_apo.size
+mask_whstars_apo_fsky = mask_whstars_apo.sum() / mask_whstars_apo.size
 
 # Print f_sky of mask with and without apodisation
-print(f'f_sky for mask without stars and without apodisation is {100 * (mask_nostars.sum() / mask_nostars.size):.2f} %')
-print(f'f_sky for mask without stars and with apodisation is {100 * (mask_nostars_apo.sum() / mask_nostars_apo.size):.2f} %')
-# print(f'f_sky for mask with stars and without apodisation is {100 * (mask_whstars.sum() / mask_whstars.size):.2f} %')
-# print(f'f_sky for mask with stars and with apodisation is {100 * (mask_whstars_apo.sum() / mask_whstars_apo.size):.2f} %')
+print(f'f_sky for mask without stars and without apodisation is {100 * mask_nostars_fsky:.2f} %')
+print(f'f_sky for mask without stars and with apodisation is {100 * mask_whstars_fsky:.2f} %')
+print(f'f_sky for mask with stars and without apodisation is {100 * mask_nostars_apo_fsky:.2f} %')
+print(f'f_sky for mask with stars and with apodisation is {100 * mask_whstars_apo_fsky:.2f} %')
+
+from matplotlib import cm
+inferno = cm.get_cmap('inferno', 2)
+
+#* Plot our four sets of masks, including their f_sky
+hp.mollview(mask_nostars,
+            title=f'Main mask without stars - no apodisation - $f_\\textrm{{sky}} = {100 * mask_nostars_fsky:.2f}\\,\\%$',
+            cmap='viridis')
+plt.savefig(f'{plots_folder}/Mask_nostars.pdf')
+
+hp.mollview(mask_whstars,
+            title=f'Main mask with stars - no apodisation - $f_\\textrm{{sky}} = {100 * mask_whstars_fsky:.2f}\\,\\%$',
+            cmap='viridis')
+plt.savefig(f'{plots_folder}/Mask_whstars.pdf')
+
+hp.mollview(mask_nostars_apo,
+            title=f'Main mask without stars - with apodisation - $f_\\textrm{{sky}} = {100 * mask_whstars_apo_fsky:.2f}\\,\\%$',
+            cmap='viridis')
+plt.savefig(f'{plots_folder}/Mask_nostars_apo.pdf')
+
+hp.mollview(mask_whstars_apo,
+            title=f'Main mask with stars - with apodisation - $f_\\textrm{{sky}} = {100 * mask_whstars_apo_fsky:.2f}\\,\\%$',
+            cmap=inferno)
+plt.savefig(f'{plots_folder}/Mask_whstars_apo.pdf')
+
+#* Compute and plot the power spectrum of the masks
+ells = np.arange(2, 3 * n_side)
+mask_nostars_cls = hp.anafast(mask_nostars)[2:]
+mask_whstars_cls = hp.anafast(mask_whstars)[2:]
+mask_nostars_apo_cls = hp.anafast(mask_nostars_apo)[2:]
+mask_whstars_apo_cls = hp.anafast(mask_whstars_apo)[2:]
+
+plt.figure(figsize=(11, 7))
+
+plt.loglog(ells[::2], mask_nostars_cls[::2], lw=2, c='cornflowerblue', label='No apo, no stars')
+plt.loglog(ells[::2], mask_whstars_cls[::2], lw=2, c='mediumseagreen', label='No apo, with stars')
+# plt.loglog(ells[::2], mask_nostars_apo_cls[::2], lw=2, c='orange', label='With apo, no stars')
+# plt.loglog(ells[::2], mask_whstars_apo_cls[::2], lw=2, c='hotpink', label='With apo, with stars')
+
+plt.xlabel(r'$\ell$')
+plt.ylabel(r'$C_{\ell}$')
+plt.title(r'Power spectrum of masks (even $\ell$ modes only)')
+
+plt.legend(ncol=2)
+plt.tight_layout()
+plt.savefig(f'{plots_folder}/Masks_powerspectrum.pdf')
 
 #* Noise values
 from scipy import constants as consts
