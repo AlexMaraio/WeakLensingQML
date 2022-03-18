@@ -26,6 +26,9 @@ if __name__ == '__main__':
         print('Reading in the star mask now and combining them')
         star_mask = hp.read_map(f'../data/masks/StarMask_N{n_side}.fits', dtype=bool)
 
+        # Plot just the star mask alone
+        plot_mask(star_mask, plot_title='Stars only', file_name=f'StarMask_N{n_side}')
+
         # Combine the original mask & star mask
         mask = np.logical_and(mask, star_mask)
 
