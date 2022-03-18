@@ -3,11 +3,18 @@ import healpy as hp
 
 
 def generate_mask(theta, n_side):
+    """
+    Function to generate a mask that is built up of galactic and ecliptic cuts only.
+
+    The parameter theta describes the angular size of these two cuts.
+    """
     n_pix = 12 * (n_side ** 2)
 
+    # Create the galactic cut coordinates, in radians
     gal_th1 = (theta / 2 - 0.5) * np.pi / theta
     gal_th2 = (theta / 2 + 0.5) * np.pi / theta
 
+    # Change the value of theta slightly for the ecliptic cut
     theta += 2
 
     # Now create the ecliptic plane cut coordinates
@@ -35,4 +42,19 @@ def generate_mask(theta, n_side):
 
     print(f'The f_sky of the combined galactic & ecliptic map is {(f_sky * 100):.3f} % ')
 
+    # Return combined mask
     return map_both
+
+
+def plot_mask(mask, plot_title, file_name):
+    """
+    Function to plot a mask in a consistent way that has already been generated
+    """
+    # Import plotting module locally
+    from matplotlib import pyplot as plt
+
+    # Use the Mollweide projection to plot our mask
+    hp.mollview(mask, title=plot_title, cmap='nipy_spectral', cbar=False)
+
+    # Save figure to plots subdirectory of the masks folder
+    plt.savefig(f'../data/masks/plots/{file_name}.pdf')
