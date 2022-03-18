@@ -11,7 +11,8 @@ mask = generate_mask(3.25, n_side)
 ```
 
 where we have set the parameter `theta = 3.25` here. This gives us an f<sub>sky</sub> value of
-approximately 34.95%. The plot of this mask is as follows
+approximately 34.95%, which corresponds to a total value of unmasked pixels of `N_pix_mask = 274 890`.
+The plot of this mask is as follows
 
 ![Plot of main galactic and ecliptic mask only](plots/SkyMask_N256_nostars.png)
 
@@ -46,4 +47,5 @@ Combining the masks in this way gives us the following mask
 
 ![Plot of combined galactic and ecliptic mask with star mask](plots/SkyMask_N256_whstars.png)
 
-When we combine our masks in this way, we find that the resulting value for f<sub>sky</sub> is approximately 33.22%.
+When we combine our masks in this way, we find that the resulting value for f<sub>sky</sub> is approximately 33.22%,
+which corresponds to a total number of unmasked pixels of `N_pix_mask = 261 221`.
