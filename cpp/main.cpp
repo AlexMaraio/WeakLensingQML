@@ -22,7 +22,7 @@ int main()
   const auto noise_var = static_cast<precision>((intrinsic_gal_ellip * intrinsic_gal_ellip) / num_gal_per_pix);
 
   // Now want to read in our mask
-  const auto filepath = "/home/maraio/Codes/QMLForWeakLensingHome/Data/Masks/New/SkyMask_N256_whstars.fits";
+  const auto mask_filepath = "/home/maraio/Codes/WeakLensingQML/data/masks/SkyMask_N256_whstars.fits";
 
   // Initialise a Healpix map that'll contain our mask
   Healpix_Map<precision> mask;
@@ -30,10 +30,10 @@ int main()
   mask.fill(0);
 
   // Read in mask and set mask array
-  read_Healpix_map_from_fits(filepath, mask);
+  read_Healpix_map_from_fits(mask_filepath, mask);
 
   // Filepath that points to the fiducial Cl spectrum
-  const auto cl_datapath = "/home/maraio/Codes/QMLForWeakLensingHome/Data/TheorySpectra_N256.dat";
+  const auto cl_datapath = "/home/maraio/Codes/WeakLensingQML/data/theory_cl_vals/TheorySpectra_N256.dat";
 
   //* Create EB class and compute Fisher matrix for it
   auto ClClass_EB = ComputeCl_EB(cl_datapath, mask, noise_var);

@@ -15,8 +15,8 @@ constexpr auto n_side = 256;
 constexpr auto n_pix = 12 * n_side * n_side;
 
 // The number of pixels in our masked maps
-constexpr auto n_pix_mask = 220076;  // With stars
-//constexpr auto n_pix_mask = 274890;  // No stars
+//constexpr auto n_pix_mask = 274890;  // Without stars
+constexpr auto n_pix_mask = 261221;  // With stars
 
 // The maximum ell mode to consider when performing alm expansions
 constexpr auto l_max = 3 * n_side - 1;
@@ -31,7 +31,7 @@ constexpr int n_hp_iter = 3;
 constexpr auto conj_grad_tol = 1e-3;
 
 // The number of maps to average over
-constexpr auto num_maps = 5;
+constexpr auto num_maps = 10;
 
 // The factor to multiply the active ell mode when estimating the Fisher matrix
 constexpr auto cl_mult_fact = 1e7;

@@ -399,7 +399,7 @@ void ComputeCl_EB::estimate_Fisher_matrix_EB()
 //  const auto F_mat_sym = (this->F_mat + this->F_mat.transpose().eval()) / 2.0;
 
   // Save the Fisher matrix to disk
-  std::ofstream Fisher("/home/maraio/Codes/QMLForWeakLensingHome/Data/ConjGrad_NumFishers/Fisher_N" + std::to_string(n_side) + "_nummaps" + std::to_string(num_maps) + "_noise30_whstars_EB.dat",
+  std::ofstream Fisher("/home/maraio/Codes/WeakLensingQML/data/numerical_fishers/ConjGrad_Fisher_N" + std::to_string(n_side) + "_nummaps" + std::to_string(num_maps) + "_noise30_EB_whstars.dat",
                        std::ios::out | std::ios::trunc);
 
   Fisher << std::setprecision(std::numeric_limits<precision>::digits10 + 1) << this->F_mat;
