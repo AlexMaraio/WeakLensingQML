@@ -15,8 +15,19 @@ constexpr auto n_side = 256;
 constexpr auto n_pix = 12 * n_side * n_side;
 
 // The number of pixels in our masked maps
+
+// N_side of 16 - without stars
+//constexpr auto n_pix_mask = 1048;
+
+// N_side of 32 - without stars
+constexpr auto n_pix_mask = 4270;
+
+// N_side of 64 - without stars
+//constexpr auto n_pix_mask = 17308;
+
+// N_side of 256
 //constexpr auto n_pix_mask = 274890;  // Without stars
-constexpr auto n_pix_mask = 261221;  // With stars
+//constexpr auto n_pix_mask = 261221;  // With stars
 
 // The maximum ell mode to consider when performing alm expansions
 constexpr auto l_max = 3 * n_side - 1;
