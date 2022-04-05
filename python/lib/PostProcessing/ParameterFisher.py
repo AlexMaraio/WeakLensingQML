@@ -95,6 +95,9 @@ class ParamFisher:
         # Dictionary of parameter names & central values
         self.cent_params = params
 
+        # Simply a list of fiducial parameter values
+        self.fiducial_values = list(params.values())
+
         # Dictionary of parameter values with their step when computing their derivatives
         self.d_params = d_params
 
@@ -212,13 +215,44 @@ class ParamFisher:
 
         self.cf_fisher_matrix.name = self.label
 
-        # Compute the Figure-of-merit for this Fisher matrix
-        fom = np.sqrt(np.linalg.det(self.param_F))
+        # Compute and store the Figure-of-merit for this Fisher matrix
+        self.fig_of_merit = np.sqrt(np.linalg.det(self.param_F))
 
-        print(f'Figure-of-merit with Nside of {self.n_side} is {fom:.4e} for {self.label}')
+    def transform_param_Fisher(self, jacobian, derived_param_names, derived_param_latex, derived_fiducial_values):
+        """
+        Function to take our existing Fisher matrix and transform it using the provided Jacobian matrix
+        """
+        if self.debug: print('Transforming the Fisher matrix now')
+
+        # Set up our class that holds the transformation
+        fisher_transformation = fd.fisher_derived(derived_matrix=jacobian,
+                                                  param_names=self.params,
+                                                  derived_param_names=derived_param_names,
+                                                  derived_param_names_latex=derived_param_latex,
+                                                  fiducial=self.fiducial_values,
+                                                  fiducial_derived=derived_fiducial_values)
+
+        # Add our existing base Fisher matrix to our transformation
+        derived_fisher = fisher_transformation.add_derived(self.cf_fisher_matrix)
+
+        # Set this class's Fisher matrix to our transformed version
+        self.cf_fisher_matrix = derived_fisher
+
+        # Update Fisher matrix's name
+        self.cf_fisher_matrix.name = self.label
+
+        # Compute and store the new figure-of-merit for this Fisher matrix
+        self.fig_of_merit = np.sqrt(np.linalg.det(self.param_F))
+
+        # Now overwrite the existing set of parameters to our new derived ones
+        self.params = derived_param_names
+        self.fiducial_values = derived_fiducial_values
 
 
-def plot_param_Fisher(fishers, n_samples, output_folder):
+def plot_param_Fisher_triangle(fishers, output_folder, plot_filename, plot_title):
+    """
+    Function to plot a set of Fisher matrices for multiple parameters as a triangle plot
+    """
     sns.reset_orig()
     mpl.rc_file_defaults()
 
@@ -232,6 +266,35 @@ def plot_param_Fisher(fishers, n_samples, output_folder):
     fisher_plotter.new_plot()
 
     # Plot our Fisher matrices as a triangle plot
-    fisher_plotter.plot_tri(title=f'Comparison of Fisher constraints for N_{{\\textsc{{side}}}} of {fishers[0].n_side} and {n_samples} samples and inv-cov correction')
+    # fisher_plotter.plot_tri(title=f'Comparison of Fisher constraints for different estimators', settings={'figure_width': 4, 'D1_main_fontsize': 12, 'D1_secondary_fontsize': 15, 'D2_main_fontsize': 15, 'D2_secondary_fontsize': 15, 'legend_fontsize': 15, 'title_fontsize': 15})
+    fisher_plotter.plot_tri(title=plot_title)
 
-    fisher_plotter.export(f'Plots_New/{output_folder}/ParamFisher_N{fishers[0].n_side}_OmS8H0_n{n_samples}.pdf')
+    # Save the triangle plot
+    fisher_plotter.export(f'{output_folder}/ParamFisher_N{fishers[0].n_side}_{plot_filename}_paper.pdf')
+
+
+def plot_param_Fisher_1D(fishers, output_folder, plot_filename, plot_title):
+    """
+    Function to plot a set of Fisher matrices for just a single parameters as a one-dimensional density plot
+    """
+    # Reset any current visual plot settings
+    sns.reset_orig()
+    mpl.rc_file_defaults()
+
+    # Extract the Cosmic-Fish Fisher matrix class's from input
+    fishers_plot = fpa.CosmicFish_FisherAnalysis()
+    fishers_plot.add_fisher_matrix([fisher.cf_fisher_matrix for fisher in fishers])
+
+    # Create plotter class from Fishers provided above
+    fisher_plotter = fp.CosmicFishPlotter(fishers=fishers_plot)
+
+    # Create new plot
+    fisher_plotter.new_plot()
+
+    # Plot the 1D distribution on the figure
+    fisher_plotter.plot1D(title=plot_title, legend_loc='center right', subplot_x_size=6)
+
+    # fisher_plotter.set_legend(legend_loc='center right')
+
+    # Save the plot to the output folder given the filename & N_side value
+    fisher_plotter.export(f'{output_folder}/ParamFisher_N{fishers[0].n_side}_{plot_filename}_paper.pdf')
