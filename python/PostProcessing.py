@@ -10,7 +10,7 @@ sns.set(font_scale=1.0, rc={'text.usetex': True})
 from lib.PostProcessing.Enums import ClType, CovType
 from lib.PostProcessing.PCl_covariances import PCl_covariances
 from lib.PostProcessing.QML_covariances import QML_covariances
-from lib.PostProcessing.ParameterFisher import ParamFisher, plot_param_Fisher
+from lib.PostProcessing.ParameterFisher import ParamFisher, plot_param_Fisher_triangle, plot_param_Fisher_1D
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -174,34 +174,155 @@ QML_nostars = QML_covariances(n_side, '/home/maraio/Codes/QMLForWeakLensingHome/
 # QML_whstars.bin_covariance_matrix()
 
 #? Parameter Fisher plots
-fiducial_cosmology = {'h': 0.7, 'Omega_c': 0.27, 'Omega_b': 0.045, 'sigma8': 0.75, 'n_s': 0.96, 'm_nu': 0.0, 'T_CMB': 2.7255, 'w0': -1.0, 'wa': 0.0}
+do_Fisher = True
 
-params = {'sigma8': 0.75, 'Omega_c': 0.27, 'h': 0.7}
-params_latex = [r'\sigma_8', r'\Omega_c', r'h']
-d_params = {'sigma8': 0.75 / 100, 'Omega_c': 0.27 / 100, 'h': 0.7 / 100}
+# Only do parameter Fisher calculations if we want to
+if do_Fisher:
+    print('Producing parameter constraints using Fisher matrix estimates')
+    fiducial_cosmology = {'h': 0.7, 'Omega_c': 0.27, 'Omega_b': 0.045, 'sigma8': 0.75, 'n_s': 0.96, 'm_nu': 0.0, 'T_CMB': 2.7255, 'w0': -1.0, 'wa': 0.0}
 
-params = {'w0': -1.0, 'wa': 0.0}
-params_latex = [r'w_0', r'w_a']
-d_params = {'w0': 0.005, 'wa': 0.005}
+    manual_l_max = None
 
+    # * Just sigma_8 and Omega_c
+    params = {'Omega_c': 0.27, 'sigma8': 0.75}
+    params_latex = [r'\Omega_c', r'\sigma_8']
+    d_params = {'Omega_c': 0.27 / 250, 'sigma8': 0.75 / 250}
 
-param_F_PCl_numeric = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.PCl, CovType.numeric, PCl_nostars, 'PCl numeric', params, params_latex, d_params, num_samples)
-param_F_PCl_analytic = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.PCl, CovType.analytic, PCl_nostars, 'PCl analytic', params, params_latex, d_params, num_samples)
-param_F_PCl_numeric_apo = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.PCl, CovType.numeric, PCl_nostars_apo, 'PCl numeric w/ apo', params, params_latex, d_params, num_samples)
+    param_F_PCl_analytic_stars = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.PCl, CovType.analytic, PCl_whstars, r'Pseudo-$C_{\ell}$', params, params_latex, d_params, num_samples, ells_per_bin=ells_per_bin, manual_l_max=manual_l_max)
+    param_F_QML_numeric_stars = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.QML, CovType.analytic, QML_whstars, 'QML', params, params_latex, d_params, num_samples, ells_per_bin=ells_per_bin, manual_l_max=manual_l_max)
 
-param_F_QML_numeric = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.QML, CovType.numeric, QML_nostars, 'QML', params, params_latex, d_params, num_samples)
+    param_F_PCl_analytic_stars.compute_param_Fisher()
+    param_F_QML_numeric_stars.compute_param_Fisher()
 
-param_F_PCl_numeric.compute_param_Fisher()
-param_F_PCl_analytic.compute_param_Fisher()
-param_F_PCl_numeric_apo.compute_param_Fisher()
-param_F_QML_numeric.compute_param_Fisher()
+    plot_param_Fisher_triangle([param_F_PCl_analytic_stars, param_F_QML_numeric_stars], output_folder=plots_folder,
+                               plot_filename='Omegac_sigma8', plot_title=None)
 
-plot_param_Fisher([param_F_PCl_numeric, param_F_PCl_analytic, param_F_PCl_numeric_apo, param_F_QML_numeric], num_samples, folder)
+    # * Now doing Omega_c, Omega_b, sigma_8
+    params = {'Omega_c': 0.27, 'Omega_b': 0.045, 'sigma8': 0.75}
+    params_latex = [r'\Omega_c', r'\Omega_b', r'\sigma_8']
+    d_params = {'Omega_c': 0.27 / 250, 'Omega_b': 0.045 / 250, 'sigma8': 0.75 / 250}
 
-plot_param_Fisher([param_F_PCl_numeric, param_F_PCl_analytic, param_F_QML_numeric], num_samples, 'ParamFisher1')
+    param_F_PCl_analytic_stars = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.PCl, CovType.analytic, PCl_whstars,
+                                             r'Pseudo-$C_{\ell}$', params, params_latex, d_params, num_samples,
+                                             ells_per_bin=ells_per_bin, manual_l_max=manual_l_max)
+    param_F_QML_numeric_stars = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.QML, CovType.analytic, QML_whstars,
+                                            'QML', params, params_latex, d_params, num_samples,
+                                            ells_per_bin=ells_per_bin, manual_l_max=manual_l_max)
 
-plot_param_Fisher([param_F_PCl_analytic, param_F_QML_numeric], num_samples+2, 'ParamFisher1')
+    param_F_PCl_analytic_stars.compute_param_Fisher()
+    param_F_QML_numeric_stars.compute_param_Fisher()
 
+    plot_param_Fisher_triangle([param_F_PCl_analytic_stars, param_F_QML_numeric_stars], output_folder=plots_folder,
+                               plot_filename='Omegac_Omegab_sigma8', plot_title=None)
+
+    # * Now want to transform our three-parameter Fisher matrix into one for Omega_m and sigma_8
+
+    # Jacobian matrix for this (Omega_c, Omega_b, sigma_8) -> (Omega_m, sigma_8) transformation
+    jacobian_matrix = np.array([[1, 0], [1, 0], [0, 1]])
+
+    # Fiducial values for our new set of parameters
+    derived_fiducial_values = np.array([params['Omega_c'] + params['Omega_b'], params['sigma8']])
+
+    derived_parameters_names = ['omega_m', 'sigma_8']
+    derived_parameters_latex = [r'\Omega_m', r'\sigma_8']
+
+    param_F_PCl_analytic_stars.transform_param_Fisher(jacobian_matrix, derived_parameters_names,
+                                                      derived_parameters_latex, derived_fiducial_values)
+
+    param_F_QML_numeric_stars.transform_param_Fisher(jacobian_matrix, derived_parameters_names,
+                                                     derived_parameters_latex, derived_fiducial_values)
+
+    plot_param_Fisher_triangle([param_F_PCl_analytic_stars, param_F_QML_numeric_stars], output_folder=plots_folder,
+                               plot_filename='Omegam_sigma8', plot_title=None)
+
+    # * Now want to transform our two-parameter Fisher matrix into a 1D one for S_8
+
+    # Function to compute the Jacobian matrix  for this (Omega_m, sigma_8) -> (S_8) transformation
+    def omegam_sigma8_to_s8(omega_m, sigma_8):
+        d_s8_d_omegam = (1 / 2) * sigma_8 * (1 / np.sqrt(0.3 * omega_m))
+
+        d_s8_d_sigma8 = np.sqrt(omega_m / 0.3)
+
+        return np.array([[d_s8_d_omegam], [d_s8_d_sigma8]])
+
+    # Construct Jacobian matrix using fiducial values
+    jacobian_matrix = omegam_sigma8_to_s8(params['Omega_c'] + params['Omega_b'], params['sigma8'])
+
+    # Fiducial values for S_8
+    derived_fiducial_values = np.array([params['sigma8'] * np.sqrt((params['Omega_c'] + params['Omega_b']) / 0.3)])
+
+    derived_parameters_names = ['S_8']
+    derived_parameters_latex = [r'S_8']
+
+    param_F_PCl_analytic_stars.transform_param_Fisher(jacobian_matrix, derived_parameters_names,
+                                                      derived_parameters_latex, derived_fiducial_values)
+
+    param_F_QML_numeric_stars.transform_param_Fisher(jacobian_matrix, derived_parameters_names,
+                                                     derived_parameters_latex, derived_fiducial_values)
+
+    plot_param_Fisher_1D([param_F_PCl_analytic_stars, param_F_QML_numeric_stars], output_folder=plots_folder,
+                         plot_filename='S8', plot_title=None)
+
+    do_range_of_l_max = False
+    if do_range_of_l_max:
+        print('Computing the figure of merit over a range of l_max values \nl_max:', end=' ', flush=True)
+
+        # Range of l_max values under consideration
+        l_max_range = np.logspace(3, 9, num=7, base=2, dtype=int)
+
+        # Re-set parameters to just Omega_c and sigma_8
+        params = {'Omega_c': 0.27, 'sigma8': 0.75}
+        params_latex = [r'\Omega_c', r'\sigma_8']
+        d_params = {'Omega_c': 0.27 / 250, 'sigma8': 0.75 / 250}
+
+        # Lists to store figure of merits in
+        fom_qml_nostars = []
+        fom_qml_whstars = []
+        fom_pcl_nostars = []
+        fom_pcl_whstars = []
+        fom_pcl_nostars_apo = []
+        fom_pcl_whstars_apo = []
+
+        for l_max_iter in l_max_range:
+            print(l_max_iter, end=' ', flush=True)
+
+            param_F_QML_whstars = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.QML, CovType.analytic,
+                                              QML_whstars, 'QML', params, params_latex, d_params, num_samples,
+                                              ells_per_bin=ells_per_bin, manual_l_max=l_max_iter)
+
+            param_F_PCl_whstars = ParamFisher(n_side, fiducial_cosmology, 1.0, ClType.PCl, CovType.analytic,
+                                              PCl_whstars, r'Pseudo-Cl', params, params_latex, d_params,
+                                              num_samples, ells_per_bin=ells_per_bin, manual_l_max=l_max_iter)
+
+            param_F_QML_whstars.compute_param_Fisher()
+            param_F_PCl_whstars.compute_param_Fisher()
+
+            # Store the figure of merit in our data lists
+            fom_qml_whstars.append(param_F_QML_whstars.fig_of_merit)
+            fom_pcl_whstars.append(param_F_PCl_whstars.fig_of_merit)
+
+        # * Now plot the figure of merit as a function of l_max
+        print('')
+        import matplotlib.ticker as ticker
+        plt.rcParams['text.usetex'] = True
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+        ax.loglog(l_max_range, fom_qml_whstars, lw=2, c='cornflowerblue', label='QML', ls='-')
+
+        ax.loglog(l_max_range, fom_pcl_whstars, lw=2, c='mediumseagreen', label=r'Pseudo-$C_{\ell}$', ls='-')
+
+        ax.set_xlabel(r'$\ell_\textrm{max}$')
+        ax.set_ylabel('Figure of merit')
+
+        # Use log base 2 for x-axis
+        ax.set_xscale('log', base=2)
+        ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda y, _: '{:g}'.format(y)))
+
+        ax.legend(ncol=1)
+
+        plt.tight_layout()
+        plt.savefig(f'{plots_folder}/figure_of_merit_vs_l_max_stars.pdf')
 
 # Reset Seaborn
 sns.reset_orig()
