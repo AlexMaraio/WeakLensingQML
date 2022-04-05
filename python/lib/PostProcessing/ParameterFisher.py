@@ -1,8 +1,9 @@
+import sys
+import os
 import numpy as np
 from scipy import stats, interpolate as interp
 import pyccl as ccl
-import sys
-import os
+import pymaster as nmt
 
 import matplotlib as mpl
 import seaborn as sns
@@ -25,11 +26,10 @@ import cosmicfish_pylib.fisher_plot as fp
 
 class ParamFisher:
 
-    def __init__(self, n_side, fiducial_cosmology, redshift, cl_type, cov_type, cov_class, label, params, params_latex, d_params, n_samples):
-
-        # Extract map resolution & associated quantities from QML class
+    def __init__(self, n_side, fiducial_cosmology, redshift, cl_type, cov_type, cov_class, label, params, params_latex,
+                 d_params, n_samples, ells_per_bin, manual_l_max=None, debug=False):
+        # Extract map resolution & associated quantities
         self.n_side = n_side
-        # self.l_max = self.QML_class.l_max
         self.l_max = 2 * self.n_side
         self.n_ell = self.l_max - 1
         self.ells = np.arange(2, self.l_max + 1)
@@ -95,14 +95,31 @@ class ParamFisher:
         # The cosmic_fish Fisher matrix
         self.cf_fisher_matrix = None
 
+        # The figure of merit for this Fisher matrix
+        self.fig_of_merit = None
+
+        # The number of ell modes per bin, if we're going to bin our data
+        self.ells_per_bin = ells_per_bin
+
+        # Set up associated bin object
+        self.bins = nmt.NmtBin.from_nside_linear(self.n_side, self.ells_per_bin)
+
+        # Should we print debugging information?
+        self.debug = debug
+
     def compute_param_Fisher(self):
-        d_param_steps = 11
+        """
+        Function to compute the parameter Fisher matrix given a Cl covariance matrix
+        """
+        # The number of steps in d_param that we should take when evaluating the derivative of the Cl values with
+        # respect to the parameter
+        d_param_steps = 25
 
         cl_derivs = {key: [] for key in self.params}
 
-        print('Computing the derivates of Cl with respect to parameter: ')
+        if self.debug: print('Computing the derivatives of Cl with respect to parameter: ')
         for param in self.params:
-            print(param, end='\t', flush=True)
+            if self.debug: print(param, end='\t', flush=True)
             param_vals = np.zeros([d_param_steps])
 
             cl_vals = np.zeros([d_param_steps, len(self.ells)])
@@ -136,9 +153,40 @@ class ParamFisher:
                 cl_deriv = float(interp.InterpolatedUnivariateSpline(param_vals, cl_vals[:, ell_idx], k=4).derivative()(self.cent_params[param]))
                 cl_derivs[param].append(cl_deriv)
 
+        # If we're using more than one ell mode per bin, then we need to bin our vector of cl_derivs
+        if self.ells_per_bin != 1:
+            if self.debug: print('Binning the cl_deriv vector')
+            num_bins = self.bins.get_n_bands()
+
+            cl_derivs_binned = {key: np.zeros(num_bins) for key in self.params}
+
+            # Bin the derivative for each parameter
+            for param_idx, param in enumerate(self.params):
+                # Then go through each bin and combine our values using the linear binning scheme
+                for bin_idx in range(num_bins):
+                    ells_bin = self.bins.get_ell_list(bin_idx)
+
+                    # The NaMaster bins continue above ell of 2 * N_side, so cut off here
+                    if ells_bin[0] > self.l_max:
+                        break
+
+                    # Get list of bin weights for current bin
+                    bin_weights = self.bins.get_weight_list(bin_idx)[ells_bin <= 2 * self.n_side]
+
+                    # Get list of ell values for current bub
+                    bin_ells = ells_bin[ells_bin <= 2 * self.n_side]
+
+                    # Convert ell values to bin indices as we start from ell=2
+                    bin_ells -= 2
+
+                    cl_derivs_binned[param][bin_idx] = bin_weights @ np.array(cl_derivs[param])[bin_ells]
+
+            # Overwrite our existing vector of derivatives with our binned version
+            cl_derivs = cl_derivs_binned
+
         self.param_F = np.zeros([len(self.params), len(self.params)])
 
-        print('\nEvaluating the parameter Fisher matrix')
+        if self.debug: print('\nEvaluating the parameter Fisher matrix')
         for param_idx_1, param_1 in enumerate(self.params):
             for param_idx_2, param_2 in enumerate(self.params):
                 cl_deriv_vec_1 = cl_derivs[param_1]
@@ -147,9 +195,11 @@ class ParamFisher:
                 self.param_F[param_idx_1, param_idx_2] = cl_deriv_vec_1 @ self.inv_cov @ cl_deriv_vec_2
 
         # Now turn our numerical Fisher matrix into a Cosmic-Fish Fisher matrix object
-        self.cf_fisher_matrix = fm.fisher_matrix(fisher_matrix=self.param_F, param_names=self.params,
-                                                 param_names_latex=self.params_latex,
-                                                 fiducial=list(self.cent_params.values()))
+        cf_fisher_matrix = fm.fisher_matrix(fisher_matrix=self.param_F, param_names=self.params,
+                                            param_names_latex=self.params_latex,
+                                            fiducial=self.fiducial_values)
+
+        self.cf_fisher_matrix = cf_fisher_matrix
 
         self.cf_fisher_matrix.name = self.label
 
