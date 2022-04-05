@@ -34,6 +34,15 @@ class ParamFisher:
         self.n_ell = self.l_max - 1
         self.ells = np.arange(2, self.l_max + 1)
 
+        # If we're artificially limiting the maximum ell-multipole that we're going to, then store it here
+        if manual_l_max is not None:
+            self.l_max = manual_l_max
+            self.n_ell = self.l_max - 1
+            self.ells = np.arange(2, self.l_max + 1)
+            self.manual_l_max = manual_l_max
+        else:
+            self.manual_l_max = self.l_max
+
         # Copy the fiducial cosmology from the QML class
         self.fiducial_cosmology = fiducial_cosmology
 
