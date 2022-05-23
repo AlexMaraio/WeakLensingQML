@@ -17,6 +17,7 @@
 #include <powspec.h>
 #include <planck_rng.h>
 #include <arr.h>
+#include <healpix_map_fitsio.h>
 
 #include "Eigen/Core"
 #include "Eigen/Dense"
@@ -60,6 +61,7 @@ public:
 
     void estimate_Fisher_matrix_EB();
 
+  void save_y_ell_from_map_EB(const std::string& file_location, const int map_num);
 
 private:
     // The filepath for data containing the Cl values
@@ -405,6 +407,54 @@ void ComputeCl_EB::estimate_Fisher_matrix_EB()
   Fisher << std::setprecision(std::numeric_limits<precision>::digits10 + 1) << this->F_mat;
 
   Fisher.close();
+}
+
+void ComputeCl_EB::save_y_ell_from_map_EB(const std::string& file_location, const int map_num)
+{
+  // This function should read in a set of shear maps that is pointed to through the map_filename argument
+  // then recover their y_ell values and save this output to the filename provided.
+
+  // Read in the set of shear maps
+//  read_Healpix_map_from_fits(file_location + "/Map" + std::to_string(map_num) + "_Q.fits", this->map_Q);
+//  read_Healpix_map_from_fits(file_location + "/Map" + std::to_string(map_num) + "_U.fits", this->map_U);
+
+  read_Healpix_map_from_fits(file_location + "/Map" + std::to_string(map_num) + "-f1z1.fits", this->map_Q, 2);
+  read_Healpix_map_from_fits(file_location + "/Map" + std::to_string(map_num) + "-f1z1.fits", this->map_U, 3);
+
+  // Now set the Eigen data vector to our HealPix map - respecting the mask
+  for (auto [pix_idx, mask_pix_idx] = std::tuple{0, 0}; pix_idx < n_pix; ++pix_idx)
+  {
+    if (mask[pix_idx])
+    {
+      b(mask_pix_idx) = static_cast<precision>(map_Q[pix_idx]);
+      x0(mask_pix_idx) = static_cast<precision>(map_Q[pix_idx] / (cl_sum + noise_var));
+
+      b(mask_pix_idx + n_pix_mask) = static_cast<precision>(map_U[pix_idx]);
+      x0(mask_pix_idx + n_pix_mask) = static_cast<precision>(map_U[pix_idx] / (cl_sum + noise_var));
+
+      ++mask_pix_idx;
+    }
+  }
+
+  // Create our y_ell vector where the output will be stored into
+  Eigen::Vector<precision, 3 * num_l_modes> y_ells;
+  y_ells.fill(0);
+
+  // Now compute the y_ell values for the current set of maps
+  const auto ret_val = this->compute_y_ell_EB(y_ells);
+
+  // If the return value from the conjugate-gradient step is not zero, then something's gone wrong!
+  if (ret_val)
+  {
+    std::cerr << "Something's gone wrong! Ret val: " << ret_val << "\n";
+    return;
+  }
+
+  // Save the set of y_ell values to the file path provided
+  std::ofstream y_ells_output(file_location + "/Map" + std::to_string(map_num) + "_yell_QML.dat",
+                              std::ios::out | std::ios::trunc);
+  y_ells_output << std::setprecision(std::numeric_limits<precision>::digits10 + 1) << y_ells;
+  y_ells_output.close();
 }
 
 
