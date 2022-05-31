@@ -169,7 +169,7 @@ class FlaskRun:
             file.write(f'SHEAR_LMAX: \t {self.n_side} \n')
 
         file.write(f'NSIDE: \t {self.n_side} \n')
-        file.write('USE_HEALPIX_WGTS: \t 0 \n\n')  # ! Changed to zero :/
+        file.write('USE_HEALPIX_WGTS: \t 0 \n\n')
 
         file.write('\n## Covariance matrix regularisation##\n\n')
         file.write('MINDIAG_FRAC: \t 1e-12 \n')
@@ -241,8 +241,8 @@ class FlaskRun:
         file.write('# Fields information file that has been auto-generated\n')
         file.write('# Field number, z bin number, mean, shift, field type (1: galaxy, 2: shear), z_min, z_max\n')
 
-        file.write(f'1 \t 1 \t 0 \t {XavierShift(self.redshift):.6f} \t 2 \t 0 \t 3 \n')
-        # file.write(f'1 \t 1 \t 0 \t 0.01214 \t 2 \t 0 \t 3 \n')
+        # file.write(f'1 \t 1 \t 0 \t {XavierShift(self.redshift):.6f} \t 2 \t 0 \t 3 \n')
+        file.write(f'1 \t 1 \t 0 \t 0.01214 \t 2 \t 0 \t 3 \n')
 
         file.close()
 
@@ -281,6 +281,9 @@ class FlaskRun:
         """
         Function to run Flask a number of times, as given by the num_maps argument
         """
+        print(f'Generating {num_maps} maps for Nside = {self.n_side}, Nside output = {self.n_side_output}, with '
+              f'distribution = {self.dist_type}, and add_noise = {add_noise}')
+
         # Go through and generate the requested number of maps
         for map_num in range(num_maps):
             if np.mod(map_num, 50) == 0:
