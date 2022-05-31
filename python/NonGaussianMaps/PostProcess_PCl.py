@@ -10,16 +10,20 @@ import pymaster as nmt
 n_side = 256
 
 # The number of maps in the ensemble
-num_maps = 1250
+num_maps = 2_500
 
 # The location of the maps
-filepath = "/disk01/maraio/NonGaussianShear/N1024_LogNormal/Maps_N256"
+filepath = "/cephfs/maraio/NonGaussianMaps/N1024_Gaussian_shift_0_01214_whnoise/Maps_N256"
+# filepath = "/cephfs/maraio/NonGaussianMaps/N1024_LogNormal_shift_0_01214_whnoise/Maps_N256"
 
 # The mask that we want to apply to the maps
-mask = hp.read_map(f'../data/masks/SkyMask_N{n_side}_nostars.fits', dtype=float)
+mask = hp.read_map(f'../../data/masks/SkyMask_N{n_side}_whstars.fits', dtype=float)
 
 # Create the NaMaster field for our mask
 field_mask = nmt.NmtField(mask, None, spin=2, purify_e=False, purify_b=False, n_iter=3)
+
+# Also create a NaMaster field for the full-sky
+field_mask_fullsky = nmt.NmtField(np.ones_like(mask), None, spin=2, purify_e=False, purify_b=False, n_iter=3)
 
 # Create bins object using 1 ell per bin
 bins = nmt.NmtBin.from_nside_linear(n_side, 1)
@@ -28,7 +32,12 @@ bins = nmt.NmtBin.from_nside_linear(n_side, 1)
 workspace = nmt.NmtWorkspace()
 workspace.compute_coupling_matrix(field_mask, field_mask, bins)
 
+# Now compute the mode-coupling matrix for the full-sky mask once
+workspace_fullsky = nmt.NmtWorkspace()
+workspace_fullsky.compute_coupling_matrix(field_mask_fullsky, field_mask_fullsky, bins)
+
 # Go through our ensemble of maps
+print(f'Computing the Pseudo-Cl values for {num_maps} maps at N={n_side} located at {filepath}')
 for map_num in range(num_maps):
     if np.mod(map_num, 50) == 0:
         print(map_num, end=' ', flush=True)
@@ -38,13 +47,47 @@ for map_num in range(num_maps):
 
     # Create NaMaster field object for our maps
     fields = nmt.NmtField(mask, [map_Q, map_U], purify_e=False, purify_b=False, n_iter=3)
+    fields_fullsky = nmt.NmtField(np.ones_like(mask), [map_Q, map_U], purify_e=False, purify_b=False, n_iter=3)
 
     # Now recover the power spectrum of these fields
     cl_coupled = nmt.compute_coupled_cell(fields, fields)
     cl_EE, cl_EB, cl_BE, cl_BB = workspace.decouple_cell(cl_coupled)
 
+    # Now recover the power spectrum of these fields
+    cl_coupled_fullsky = nmt.compute_coupled_cell(fields_fullsky, fields_fullsky)
+    cl_EE_fullsky, cl_EB_fullsky, cl_BE_fullsky, cl_BB_fullsky = workspace_fullsky.decouple_cell(cl_coupled_fullsky)
+
     # Save the power spectrum for the current realisation
     np.savetxt(f'{filepath}/Map{map_num}_Cl_EE_PCl.dat', cl_EE)
     np.savetxt(f'{filepath}/Map{map_num}_Cl_BB_PCl.dat', cl_BB)
 
+    np.savetxt(f'{filepath}/Map{map_num}_Cl_EE_PCl_fullsky.dat', cl_EE_fullsky)
+    np.savetxt(f'{filepath}/Map{map_num}_Cl_BB_PCl_fullsky.dat', cl_BB_fullsky)
+
 print('...Done!')
+
+#* Now want to compute and then save the numerical covariance matrix recovered from the above spectra
+
+# The number of ell modes for this n_side
+num_ell_modes = (3 * n_side - 1) - 1
+
+cl_samples_EE = np.zeros([num_maps, num_ell_modes])
+cl_samples_BB = np.zeros([num_maps, num_ell_modes])
+
+print('Reading in Cl values for covariance matrices')
+for map_num in range(num_maps):
+    cl_EE = np.loadtxt(f'{filepath}/Map{map_num}_Cl_EE_PCl.dat')
+    cl_BB = np.loadtxt(f'{filepath}/Map{map_num}_Cl_BB_PCl.dat')
+
+    cl_samples_EE[map_num] = cl_EE
+    cl_samples_BB[map_num] = cl_BB
+
+# Compute covariance matrices
+print('Computing covariance matrices')
+cl_EE_cov = np.cov(cl_samples_EE, rowvar=False)
+cl_BB_cov = np.cov(cl_samples_BB, rowvar=False)
+
+# Save covariance matrices
+print('Saving covariance matrices')
+np.savetxt(f'{filepath}/../Numerical_covariance_EE_PCl_N{n_side}.dat', cl_EE_cov)
+np.savetxt(f'{filepath}/../Numerical_covariance_BB_PCl_N{n_side}.dat', cl_BB_cov)
