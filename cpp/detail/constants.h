@@ -1,3 +1,4 @@
+
 //
 // Created by amaraio on 22/09/2021.
 //
@@ -9,25 +10,13 @@
 using precision = double;
 
 // The N_side parameter of our maps
-constexpr auto n_side = 256;
+constexpr auto n_side = 64;
 
 // The number of pixels in our unmasked maps
 constexpr auto n_pix = 12 * n_side * n_side;
 
 // The number of pixels in our masked maps
-
-// N_side of 16 - without stars
-//constexpr auto n_pix_mask = 1048;
-
-// N_side of 32 - without stars
-constexpr auto n_pix_mask = 4270;
-
-// N_side of 64 - without stars
-//constexpr auto n_pix_mask = 17308;
-
-// N_side of 256
-//constexpr auto n_pix_mask = 274890;  // Without stars
-//constexpr auto n_pix_mask = 261221;  // With stars
+constexpr auto n_pix_mask = 17308;
 
 // The maximum ell mode to consider when performing alm expansions
 constexpr auto l_max = 3 * n_side - 1;
@@ -39,13 +28,16 @@ constexpr auto num_l_modes = l_max - 1;
 constexpr int n_hp_iter = 3;
 
 // The tolerance used in the conjugate-gradient algorithm
-constexpr auto conj_grad_tol = 1e-3;
+constexpr auto conj_grad_tol = 1e-6;
 
 // The number of maps to average over
-constexpr auto num_maps = 10;
+constexpr auto num_maps = 25;
 
 // The factor to multiply the active ell mode when estimating the Fisher matrix
 constexpr auto cl_mult_fact = 1e7;
+
+// The noise variance
+constexpr auto noise_var = 4.86520223622195e-06;
 
 // Terminal colours
 constexpr auto TERM_RESET = "\033[0m";
@@ -53,3 +45,4 @@ constexpr auto TERM_RED   = "\033[0;31m";
 constexpr auto TERM_BLUE  = "\033[0;34m";
 
 #endif //CONJGRAD_EIGEN_CONSTANTS_H
+    

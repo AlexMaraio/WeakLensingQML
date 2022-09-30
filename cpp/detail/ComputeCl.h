@@ -59,9 +59,12 @@ public:
 
     int compute_y_ell_EB(Eigen::Vector<precision, 3 * num_l_modes>& y_ells_in);
 
-    void estimate_Fisher_matrix_EB();
+    void estimate_Fisher_matrix_EB(const std::string& fisher_matrix_out_path);
 
   void save_y_ell_from_map_EB(const std::string& file_location, const int map_num);
+
+  void estimate_y_ell_from_map_EB(const std::string& map_gamma1_path, const std::string& map_gamma2_path,
+                                  const std::string& y_ell_output_path);
 
 private:
     // The filepath for data containing the Cl values
@@ -298,7 +301,7 @@ int ComputeCl_EB::compute_y_ell_EB(Eigen::Vector<precision, 3 * num_l_modes>& y_
 }
 
 
-void ComputeCl_EB::estimate_Fisher_matrix_EB()
+void ComputeCl_EB::estimate_Fisher_matrix_EB(const std::string& fisher_matrix_out_path)
 {
   // First, set all entries in the Fisher matrix to zero
   F_mat.fill(0);
@@ -401,8 +404,8 @@ void ComputeCl_EB::estimate_Fisher_matrix_EB()
 //  const auto F_mat_sym = (this->F_mat + this->F_mat.transpose().eval()) / 2.0;
 
   // Save the Fisher matrix to disk
-  std::ofstream Fisher("/home/maraio/Codes/WeakLensingQML/data/numerical_fishers/ConjGrad_Fisher_N" + std::to_string(n_side) + "_nummaps" + std::to_string(num_maps) + "_noise30_EB_whstars.dat",
-                       std::ios::out | std::ios::trunc);
+//  std::ofstream Fisher("/home/maraio/Codes/WeakLensingQML/data/numerical_fishers/ConjGrad_Fisher_N" + std::to_string(n_side) + "_nummaps" + std::to_string(num_maps) + "_noise30_EB_whstars.dat", std::ios::out | std::ios::trunc);
+  std::ofstream Fisher(fisher_matrix_out_path, std::ios::out | std::ios::trunc);
 
   Fisher << std::setprecision(std::numeric_limits<precision>::digits10 + 1) << this->F_mat;
 
@@ -453,6 +456,48 @@ void ComputeCl_EB::save_y_ell_from_map_EB(const std::string& file_location, cons
   // Save the set of y_ell values to the file path provided
   std::ofstream y_ells_output(file_location + "/Map" + std::to_string(map_num) + "_yell_QML.dat",
                               std::ios::out | std::ios::trunc);
+  y_ells_output << std::setprecision(std::numeric_limits<precision>::digits10 + 1) << y_ells;
+  y_ells_output.close();
+}
+
+
+void ComputeCl_EB::estimate_y_ell_from_map_EB(const std::string& map_gamma1_path, const std::string& map_gamma2_path,
+                                const std::string& y_ell_output_path)
+{
+  read_Healpix_map_from_fits(map_gamma1_path, this->map_Q, 1);
+  read_Healpix_map_from_fits(map_gamma2_path, this->map_U, 1);
+
+  // Now set the Eigen data vector to our HealPix map - respecting the mask
+  for (auto [pix_idx, mask_pix_idx] = std::tuple{0, 0}; pix_idx < n_pix; ++pix_idx)
+  {
+    if (mask[pix_idx])
+    {
+      b(mask_pix_idx) = static_cast<precision>(map_Q[pix_idx]);
+      x0(mask_pix_idx) = static_cast<precision>(map_Q[pix_idx] / (cl_sum + noise_var));
+
+      b(mask_pix_idx + n_pix_mask) = static_cast<precision>(map_U[pix_idx]);
+      x0(mask_pix_idx + n_pix_mask) = static_cast<precision>(map_U[pix_idx] / (cl_sum + noise_var));
+
+      ++mask_pix_idx;
+    }
+  }
+
+  // Create our y_ell vector where the output will be stored into
+  Eigen::Vector<precision, 3 * num_l_modes> y_ells;
+  y_ells.fill(0);
+
+  // Now compute the y_ell values for the current set of maps
+  const auto ret_val = this->compute_y_ell_EB(y_ells);
+
+  // If the return value from the conjugate-gradient step is not zero, then something's gone wrong!
+  if (ret_val)
+  {
+    std::cerr << "Something's gone wrong! Ret val: " << ret_val << "\n";
+    return;
+  }
+
+  // Save the set of y_ell values to the file path provided
+  std::ofstream y_ells_output(y_ell_output_path, std::ios::out | std::ios::trunc);
   y_ells_output << std::setprecision(std::numeric_limits<precision>::digits10 + 1) << y_ells;
   y_ells_output.close();
 }
