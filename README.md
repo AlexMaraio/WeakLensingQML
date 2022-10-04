@@ -32,6 +32,8 @@ Using this notebook, it should be easy to extend this to whatever way the user s
 The algorithms and implementation is detailed in Maraio, Hall, and Taylor 2022
 which can be found on the arXiv at [https://arxiv.org/abs/2207.10412](https://arxiv.org/abs/2207.10412).
 
+If you use all or part of our code/method then please consider citing the above paper as it demonstrates that this work
+is useful to the community, thank you! 
 
 ## Contact
 
