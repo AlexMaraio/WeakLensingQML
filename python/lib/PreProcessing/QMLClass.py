@@ -11,8 +11,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from .Enums import SpecType
-from .Field import Field
+# from .Enums import SpecType
+# from .Field import Field
 
 
 sns.set(font_scale=1.2, rc={'text.usetex': True})
