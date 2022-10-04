@@ -15,4 +15,5 @@ LINK_LIBRARIES(healpix_cxx)
 # Set compilation flags to highest available optimisation settings
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native -flto -Wall -Wextra -fopenmp")
 
-ADD_EXECUTABLE(ConjGrad_Eigen main.cpp)
+ADD_EXECUTABLE(QMLShearExe main.cpp)
+ADD_LIBRARY(QMLShearLib SHARED py_library.cpp)

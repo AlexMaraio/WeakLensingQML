@@ -12,15 +12,6 @@ int main()
 {
   std::cout << "Starting main now...\n";
 
-  // Noise bias constant values
-  constexpr auto intrinsic_gal_ellip = 0.21;
-  constexpr auto avg_gal_den = 3;
-  constexpr auto area_per_pix = 1.49E8 / n_pix;
-  constexpr auto num_gal_per_pix = avg_gal_den * area_per_pix;
-
-  // The variance of the noise in each pixel
-  const auto noise_var = static_cast<precision>((intrinsic_gal_ellip * intrinsic_gal_ellip) / num_gal_per_pix);
-
   // Now want to read in our mask
   const auto mask_filepath = "/home/maraio/Codes/WeakLensingQML/data/masks/SkyMask_N" + std::to_string(n_side) + "_nostars.fits";
 
@@ -41,10 +32,15 @@ int main()
   // Read in the provided power spectrum
   ClClass_EB.read_in_power_spec_EB();
 
-  // Compute a numerical estimate of the Fisher matrix
- ClClass_EB.estimate_Fisher_matrix_EB();
+  // Output filepath for the Fisher matrix
+  const auto fisher_output_path = "/home/maraio/Codes/WeakLensingQML/data/numerical_fishers/QML_Fisher_N256.dat";
 
- return 0;
+  // Compute a numerical estimate of the Fisher matrix
+ ClClass_EB.estimate_Fisher_matrix_EB(fisher_output_path);
+
+ /*
+  * Now switch to computing a set of y_ell values for a range of maps
+  */
 
   // The number of maps to compute the y_ell values for
   const auto total_num_maps = 1250;
