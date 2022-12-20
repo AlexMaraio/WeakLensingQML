@@ -8,9 +8,7 @@ import healpy as hp
 import matplotlib.pyplot as plt
 import pymaster as nmt
 
-import seaborn as sns
-
-sns.set(font_scale=1.0, rc={'text.usetex': True})
+plt.rcParams['text.usetex'] = True
 
 from lib.PostProcessing.PCl_covariances import PCl_covariances
 from lib.PostProcessing.QML_covariances import QML_covariances
@@ -22,7 +20,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 
 # The output folder under ./Plots
-folder = 'Final/AnalyticCovRatio'
+folder = 'Final/StarsPlotsNew'
 plots_folder = f'../data/Plots/{folder}'
 
 # See if folder doesn't exist already, then make it if not
@@ -44,7 +42,7 @@ apo_scale = 2.0
 
 star_mask = hp.read_map('../data/masks/StarMask_N256.fits', dtype=float)
 
-mask_nostars = hp.read_map('../data/Masks/SkyMask_N256_nostars.fits', dtype=float)
+mask_nostars = hp.read_map('../data/masks/SkyMask_N256_nostars.fits', dtype=float)
 
 mask_whstars = mask_nostars * star_mask
 
@@ -56,22 +54,39 @@ mask_whstars_apo = nmt.mask_apodization(mask_whstars.copy(), aposize=apo_scale, 
 ells = np.arange(2, 3 * n_side)
 mask_nostars_cls = hp.anafast(mask_nostars)[2:]
 mask_whstars_cls = hp.anafast(mask_whstars)[2:]
+mask_stars_only_cls = hp.anafast(star_mask)[2:]
 
 # Plot the power spectrum of the mask with and without stars
-fig, ax = plt.subplots(figsize=(5, 2.5))
+fig, ax = plt.subplots(figsize=(5.5, 3.5))
 
-ax.loglog(ells, ells * (ells + 1) * mask_whstars_cls / (2 * np.pi), lw=2, c='purple', label='With stars')
+ax.loglog(ells, ells * (ells + 1) * mask_whstars_cls / (2 * np.pi), lw=2, c='cornflowerblue',
+          label='Main mask with stars')
 
-ax.loglog(ells[::2], ells[::2] * (ells[::2] + 1) * mask_nostars_cls[::2] / (2 * np.pi), lw=2, c='cornflowerblue',
-          label='No stars')
+ax.loglog(ells[::2], ells[::2] * (ells[::2] + 1) * mask_nostars_cls[::2] / (2 * np.pi), lw=2, c='mediumseagreen',
+          label='Main mask without stars')
 
-ax.set_xlabel(r'$\ell$')
-ax.set_ylabel(r'$\ell (\ell + 1) C_{\ell} / 2 \pi$')
+ax.loglog(ells, ells * (ells + 1) * mask_stars_only_cls / (2 * np.pi), lw=2, c='orange',
+          label='Stars only')
 
-ax.legend()
+# Increase size of tick labels
+ax.tick_params(axis='x', labelsize=12)
+ax.tick_params(axis='y', labelsize=12)
+
+ax.set_xlabel(r'$\ell$', size=14)
+ax.set_ylabel(r'$\ell (\ell + 1) C_{\ell} / 2 \pi$', size=14)
+
+ax.set_xlim(left=2, right=3 * n_side - 1)
+
+ax.legend(fontsize=12)
+
 fig.tight_layout()
 fig.savefig(f'{plots_folder}/Mask_power_spectrum_stars.pdf')
 plt.close(fig)
+
+# Leave in if just want to make plots
+import sys
+sys.exit()
+
 
 # Noise values
 from scipy import constants as consts
